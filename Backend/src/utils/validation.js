@@ -102,18 +102,28 @@ const validateFile = (file) => {
         errors.push(`File type .${fileExtension} is not allowed. Allowed types: ${allowedTypes.join(', ')}`);
     }
     
-    // Check MIME type
+    // Check MIME type - be more flexible for mobile uploads
     const allowedMimeTypes = {
-        'pdf': 'application/pdf',
-        'jpg': 'image/jpeg',
-        'jpeg': 'image/jpeg',
-        'png': 'image/png',
-        'tiff': 'image/tiff',
-        'bmp': 'image/bmp'
+        'pdf': ['application/pdf'],
+        'jpg': ['image/jpeg', 'image/jpg'],
+        'jpeg': ['image/jpeg', 'image/jpg'],
+        'png': ['image/png'],
+        'tiff': ['image/tiff', 'image/tif'],
+        'bmp': ['image/bmp']
     };
     
-    if (allowedMimeTypes[fileExtension] && file.mimetype !== allowedMimeTypes[fileExtension]) {
-        errors.push('File type does not match file content');
+    // More flexible validation for mobile apps that may report different MIME types
+    if (allowedMimeTypes[fileExtension]) {
+        const acceptedMimeTypes = allowedMimeTypes[fileExtension];
+        const isImageType = file.mimetype.startsWith('image/');
+        const isPdfType = file.mimetype === 'application/pdf';
+        
+        // Allow any image MIME type for image files, and correct PDF type for PDFs
+        if (fileExtension === 'pdf' && !isPdfType) {
+            errors.push('PDF file type does not match file content');
+        } else if (['jpg', 'jpeg', 'png', 'tiff', 'bmp'].includes(fileExtension) && !isImageType) {
+            errors.push('Image file type does not match file content');
+        }
     }
     
     return {

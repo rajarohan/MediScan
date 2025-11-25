@@ -13,6 +13,8 @@ const auditLogSchema = new mongoose.Schema({
         enum: [
             // Authentication actions
             'login', 'logout', 'login_failed', 'password_reset', 'account_locked', 'registration_failed', 'token_refreshed', 'token_refresh_failed',
+            // Profile actions
+            'profile_viewed', 'profile_updated',
             // File listing actions
             'files_listed',
             // File actions

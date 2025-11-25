@@ -106,11 +106,23 @@ class FileService {
         // Get file info
         const fileInfo = await FileSystem.getInfoAsync(image.uri);
         
+        // Determine file extension and MIME type from the URI
+        let fileExtension = 'jpg';
+        let mimeType = 'image/jpeg';
+        
+        if (image.uri.includes('.png')) {
+          fileExtension = 'png';
+          mimeType = 'image/png';
+        } else if (image.uri.includes('.jpg') || image.uri.includes('.jpeg')) {
+          fileExtension = 'jpg';
+          mimeType = 'image/jpeg';
+        }
+        
         const file = {
           uri: image.uri,
-          name: `image_${Date.now()}.jpg`,
+          name: `image_${Date.now()}.${fileExtension}`,
           size: fileInfo.size,
-          mimeType: 'image/jpeg',
+          mimeType: mimeType,
           type: 'image',
         };
 
