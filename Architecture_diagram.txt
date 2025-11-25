@@ -1,0 +1,31 @@
++--------------------+         HTTPS         +--------------------------+
+| React Native App   | <-------------------> | MEN Backend (Express)    |
+| (iOS/Android)      |  (REST + JWT)         | - Auth (JWT/OAuth)       |
+| - File upload UI   |                       | - File metadata API      |
+| - View reports     |                       | - Job queue API          |
++--------------------+                       +-----------+--------------+
+                                                  |  (queue / webhook)
+                                                  |
+                                                  v
+                                         +-------------------------+
+                                         | Job Queue / Broker      |
+                                         | (Redis / RabbitMQ / SQS)|
+                                         +-------------------------+
+                                                  |
+                                                  v
+                                         +-------------------------+
+                                         | Flask AI Service        |
+                                         | - OCR (Tesseract/Tf,    |
+                                         |   or custom OCR model)  |
+                                         | - Text extraction       |
+                                         | - NER & normalization   |
+                                         | - Vitals comparator     |
+                                         | - Summarization         |
+                                         +-----------+-------------+
+                                                     |
+                                                     v
+                                         +-------------------------+
+                                         | Object Storage / DB     |
+                                         | - File store (S3)       |
+                                         | - Result JSON (MongoDB) |
+                                         +-------------------------+

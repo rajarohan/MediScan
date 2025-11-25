@@ -1,0 +1,39 @@
+Build a complete system design and workflow description for a mobile application with the following architecture:
+
+Frontend (Mobile App – React Native):
+
+Users can upload medical documents (PDF, images, reports).
+
+Client handles authentication, file upload, viewing results, and showing summaries.
+
+Smooth, secure UX with progress indicators.
+
+Backend (MEN Stack – MongoDB, Express, Node.js):
+
+Handles user authentication (JWT).
+
+Stores file metadata, user details, and processed report history.
+
+Accepts uploaded files, stores them locally or on cloud storage.
+
+Sends file info (path/URL) to a separate AI service for processing.
+
+Receives processed results from AI service and stores them securely in MongoDB.
+
+Exposes REST APIs for the mobile app.
+
+AI Processing Service (Flask):
+
+Independent microservice.
+
+Performs OCR, text extraction, medical term parsing, and summarization.
+
+Creates clinician-friendly summaries with vital comparisons (low/normal/high).
+
+Returns structured JSON to the MEN backend.
+
+End-to-End Workflow:
+
+User uploads medical file → MEN backend saves metadata → MEN sends file to Flask AI → Flask processes OCR & summaries → MEN saves response → App displays summary.
+
+Must ensure security, scalability, and clear API communication between services.

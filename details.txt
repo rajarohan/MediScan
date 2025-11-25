@@ -1,0 +1,488 @@
+API flow (endpoints, payloads, status codes)
+Auth & User
+
+POST /api/v1/auth/register
+Payload:
+
+{ "name":"", "email":"", "password":"" }
+
+
+Responses:
+
+201 Created — user created (returns { userId, email })
+
+400 Bad Request — validation error
+
+POST /api/v1/auth/login
+Payload:
+
+{ "email":"", "password":"" }
+
+
+Responses:
+
+200 OK — { "accessToken":"<jwt>", "refreshToken":"<token>", "expiresIn":3600 }
+
+401 Unauthorized
+
+POST /api/v1/auth/refresh
+Payload:
+
+{ "refreshToken":"" }
+
+
+Responses:
+
+200 OK — new access token
+
+403 Forbidden — invalid refresh
+
+File upload / processing
+
+POST /api/v1/files — (multipart/form-data) Upload a document
+Headers: Authorization: Bearer <jwt>
+Form fields: file, optional metadata (JSON string), consent: boolean
+Response:
+
+202 Accepted — { "fileId":"", "jobId":"", "status":"queued" }
+
+400 validation
+
+GET /api/v1/files/:fileId/status
+Response:
+
+200 OK — { "fileId":"", "jobId":"", "status":"queued|processing|done|failed", "progress": 0-100 }
+
+GET /api/v1/files/:fileId/result
+Response:
+
+200 OK — { "fileId":"", "processedAt":"ISO", "summary":"", "structured":{...}, "vitals":[{...}], "confidence":{...} }
+
+404 Not Found
+
+Internal MEN ↔ Flask
+
+Use either Job Queue or REST webhook. Example REST webhook (preferred for deterministic acknowledgement):
+
+POST /internal/ai/process (from MEN to Flask)
+Payload:
+
+{
+  "jobId":"", "fileUrl":"https://s3.../file.pdf",
+  "fileId":"", "userId":"", "metadata": {...}, "callbackUrl":"https://men/api/v1/ai/callback"
+}
+
+
+Responses:
+
+202 Accepted — job accepted with taskId
+
+409 Conflict — duplicate
+
+POST /internal/ai/callback (from Flask -> MEN)
+Payload:
+
+{
+  "jobId":"", "taskId":"", "status":"success|failed",
+  "result": {
+     "summary":"...", "entities":[...], "vitals":[{"name":"BP","value":"120/80","unit":"mmHg","range":"90-120/60-80","flag":"normal"}],
+     "ocrText":"...", "rawJson": {...}
+  },
+  "modelVersion":"v1.2.0",
+  "processingTimeMs": 1234
+}
+
+
+Responses:
+
+200 OK — MEN accepts & stores result
+
+400 — invalid payload
+
+Responsibilities of each component
+React Native App
+
+Authenticate users and securely store access tokens (secure storage).
+
+Upload files with progress and retry logic.
+
+Display processing status and clinician-friendly summaries.
+
+Request user's explicit consent for PHI processing.
+
+Local caching for offline access (non-sensitive caching policy).
+
+Provide settings for data export/deletion.
+
+MEN Backend (MongoDB, Express, Node.js)
+
+User management (registration, login, password reset, 2FA optionally).
+
+Authorization (role-based access if needed).
+
+Store file metadata and pointers to object storage (S3/GCS/local).
+
+Receive file uploads (or signed upload URLs), create processing jobs.
+
+Send job message to queue or call Flask AI service.
+
+Receive callback results from Flask and persist processed JSON and audit logs.
+
+Expose REST APIs for app, with pagination, rate limits, and filtering.
+
+Manage retention, deletion, and consent records.
+
+Mask or redact PHI when returning results to non-authorized roles if required.
+
+Job Queue / Broker (Redis, RabbitMQ, SQS)
+
+Buffer jobs; allow retries and exponential backoff.
+
+Support dead-letter queues for failed jobs.
+
+Provide observability on queue length and processing latency.
+
+Flask AI Service
+
+Download file from given fileUrl and validate file type/safety.
+
+Perform OCR (best-effort, language support detection).
+
+Normalize text: correct OCR artifacts, extract structured entities (tests, medications, vitals).
+
+Map vital names to canonical forms (e.g., "blood pressure" → BP).
+
+Compare numeric vitals to configured clinical ranges and set flags (low/normal/high).
+
+Produce clinician-friendly summary and structured JSON with provenance and confidence scores.
+
+Include modelVersion and processing metadata.
+
+Validate outputs against a schema and POST to MEN callback.
+
+Object Storage (S3/GCS/local)
+
+Store original files and optionally derived artifacts (OCR text, images).
+
+Provide signed URLs with short TTL for inter-service transfers.
+
+Database (MongoDB)
+
+Store users, files metadata, job records, processing results, audit logs, consent records.
+
+Data models (MongoDB-style schemas)
+User
+{
+  _id: ObjectId,
+  name: String,
+  email: String,
+  passwordHash: String,
+  roles: [String],            // e.g., ["user"], ["clinician"]
+  createdAt: Date,
+  updatedAt: Date,
+  mfaEnabled: Boolean,
+  lastLogin: Date
+}
+
+File / Document
+{
+  _id: ObjectId,
+  userId: ObjectId,
+  originalFilename: String,
+  storageUrl: String,         // S3 or internal path
+  contentType: String,
+  size: Number,
+  uploadedAt: Date,
+  metadata: { source, examType, tags },
+  consent: { given: Boolean, givenAt: Date, policyVersion: String },
+  currentStatus: "queued|processing|done|failed",
+  jobId: String,
+  expiresAt: Date             // for retention policy
+}
+
+Processing Job / Result
+{
+  _id: ObjectId,
+  jobId: String,
+  fileId: ObjectId,
+  userId: ObjectId,
+  createdAt: Date,
+  startedAt: Date,
+  finishedAt: Date,
+  status: "queued|processing|done|failed",
+  processingTimeMs: Number,
+  aiModelVersion: String,
+  result: {
+    summary: String,
+    ocrText: String,
+    entities: [
+      { type: "vital|lab|diagnosis|medication", name: String, value: String, unit: String, normalizedName: String, confidence: Number }
+    ],
+    vitals: [
+      { name: "BP", value: "120/80", unit: "mmHg", rangeLow: 90, rangeHigh: 120, flag: "normal" }
+    ],
+    rawJson: Object
+  },
+  errors: [ String ],
+  audit: { callbackReceivedAt: Date, callbackIp: String }
+}
+
+Audit Log
+{
+  _id: ObjectId,
+  userId: ObjectId,
+  action: String,             // e.g., "upload", "download", "delete", "view-summary"
+  resourceId: ObjectId,
+  timestamp: Date,
+  ip: String,
+  userAgent: String,
+  extra: Object
+}
+
+Security considerations (PHI-level)
+
+Authentication & Authorization
+
+Use short-lived JWTs (access token ~15 min) + refresh tokens with secure storage.
+
+Support OAuth2 / federated login optionally for enterprises.
+
+Role-based access control (RBAC). Only authorized clinicians/users can view full PHI.
+
+Transport & Network
+
+Enforce HTTPS everywhere (mobile ↔ MEN, MEN ↔ Flask, services ↔ storage).
+
+Validate TLS certificates; use HSTS.
+
+Data at Rest
+
+Encrypt sensitive fields in DB at rest (MongoDB enterprise encryption or field-level encryption).
+
+Encrypt object storage (S3 server-side encryption) and use SSE-KMS for key management.
+
+Key Management
+
+Use managed KMS (AWS KMS, GCP KMS) for encryption keys.
+
+Rotate keys periodically and support key versioning.
+
+Least Privilege
+
+Service accounts with minimal permissions (Flask can only read from specific storage prefixes).
+
+Use IAM roles for cloud services.
+
+Audit & Logging
+
+Immutable audit logs for access to PHI (who viewed/downloaded/modified).
+
+Log metadata, not raw PHI when possible; redact sensitive fields in logs.
+
+Consent & Privacy
+
+Record explicit user consent for processing PHI and version of privacy policy at the time of consent.
+
+Provide deletion/forget features complying with retention policy.
+
+Input Validation & File Safety
+
+Validate file types & sizes; scan files for malware.
+
+Reject polyglot files and dangerous content.
+
+Inter-service Security
+
+Use mTLS or signed tokens between MEN and Flask.
+
+Sign callbacks with HMAC and validate on receipt (shared secret rotated regularly).
+
+Rate Limiting & Abuse Prevention
+
+Rate-limit uploads per user and per IP.
+
+Quotas and backoff on repeated failed attempts.
+
+HIPAA / Regional Compliance
+
+Business Associate Agreements if using cloud vendor (for US/HIPAA).
+
+Data residency controls if required by jurisdiction.
+
+Model Safety & Explanations
+
+Include model version and confidence.
+
+Never make final clinical decisions; add disclaimers and require clinician review.
+
+Step-by-step workflow explanation
+
+User Authentication
+
+User logs in/registers on mobile. The app stores short-lived JWT in secure store and refresh token in secure storage if allowed.
+
+User Uploads File
+
+App requests a signed upload URL from MEN (POST /api/v1/files returns uploadUrl and fileId) or uploads directly to MEN.
+
+App uploads file to storage (S3) using the signed URL. This avoids backend bandwidth when using cloud storage.
+
+MEN Creates Job
+
+MEN creates a File and Job records (status: queued), stores metadata and consent record.
+
+MEN pushes a job message to Job Queue or calls Flask /internal/ai/process with fileUrl, jobId, and callbackUrl.
+
+Job Scheduling
+
+Job Queue distributes to Flask workers. MEN marks status processing.
+
+Flask AI Processing
+
+Flask downloads file using short-lived URL.
+
+Validate file; pre-process images/PDF pages.
+
+Run OCR → get plain text with positional data.
+
+Run NLP pipelines: entity extraction (lab results, vitals), normalization (units and naming), mapping to canonical vocabularies (LOINC, SNOMED if needed).
+
+Compare extracted vitals to configurable normal ranges (age/sex-specific when available) and set flags.
+
+Generate clinician-friendly summary: bulleted comparisons, key abnormal values, recommended follow-ups, and confidence scores.
+
+Package result JSON with provenance (modelVersion, tool chain, processingTimeMs).
+
+Flask Callback
+
+Flask POSTs the result to MEN callbackUrl with HMAC signature header.
+
+MEN verifies signature, stores result JSON into ProcessingJob, updates File and Job status to done (or failed).
+
+Notifications & Retrieval
+
+MEN emits push notification / websocket / push (FCM / APNs) to user about completion.
+
+App polls GET /api/v1/files/:fileId/status or receives push and retrieves GET /api/v1/files/:fileId/result.
+
+Audit & Retention
+
+All access and operations logged.
+
+If user requests deletion, MEN triggers deletion in object store and marks records accordingly (soft delete or purge depending on policy).
+
+Error Handling
+
+If Flask processing fails, it retries based on exponential backoff; after max attempts, pushes a dead-letter queue and notifies MEN.
+
+MEN surfaces friendly error messages and allows re-submission.
+
+Additional improvements for production readiness
+Reliability & Scaling
+
+Horizontal scale: Make Flask stateless; scale workers behind an autoscaling group or managed container service. MEN behind load balancer.
+
+Queue-based decoupling: Use durable message broker (SQS/RabbitMQ) with DLQ and visibility timeouts.
+
+Batching & parallel page processing: For multi-page PDFs, process pages in parallel and merge results.
+
+Observability & Monitoring
+
+Instrument services with structured logs (JSON), traces (OpenTelemetry), and metrics (Prometheus + Grafana). Monitor:
+
+Job latency, success rate, queue depth, error rate per model version.
+
+Alerting for abnormal increases in failure rate or latency.
+
+CI/CD & Infrastructure
+
+Pipeline for tests & deployment (unit, integration, e2e). Use feature flags and canary releases for model updates.
+
+Containerize services and maintain immutable deployments (Docker + K8s or Fargate).
+
+Model Management
+
+Model versioning and AB testing: annotate results with modelVersion and allow rollback.
+
+Maintain a registry for models and artifacts.
+
+Periodic re-validation and human-in-the-loop checks for accuracy drift.
+
+Data Management & Compliance
+
+Data retention policy: configurable retention windows; support export and complete deletion.
+
+Regular security & compliance audits and penetration testing.
+
+Consent & data-use logs to meet regulatory requirements.
+
+Quality & Safety
+
+Human-in-the-loop review for initial deployments to evaluate model quality on real-world data.
+
+Implement whitelist/blacklist for sensitive fields that must be withheld or prompt special handling.
+
+Provide "explainability" / provenance for each key result: which text supported the finding and OCR confidence.
+
+UX / Product
+
+Allow users to mark a result as "incorrect" and provide feedback to retrain models.
+
+Offer differential-level summaries: patient-facing (simple) and clinician-facing (detailed with numbers and references).
+
+Export options (PDF/HL7/FHIR) for integration with EHRs. Consider adding a FHIR resource mapping layer later.
+
+Testing
+
+Build synthetic & recorded test-cases for common medical document types (lab reports, discharge summaries, prescriptions).
+
+Use fuzz testing for file uploads and edge-case documents.
+
+Example minimal JSON roundtrip (upload → result)
+
+App requests upload:
+
+POST /api/v1/files
+Authorization: Bearer <jwt>
+Content-Type: application/json
+
+{ "filename":"cbc_report.pdf", "metadata": {"type":"lab"}, "consent": true }
+
+
+Response:
+
+{
+  "fileId":"64c2f7b2...",
+  "uploadUrl":"https://s3.amazonaws.com/....?signed",
+  "jobId":"job_123",
+  "status":"queued"
+}
+
+
+MEN -> Flask (job request):
+
+{
+  "jobId":"job_123",
+  "fileId":"64c2f7b2...",
+  "fileUrl":"https://s3.../cbc_report.pdf?sig=short",
+  "userId":"usr_55",
+  "callbackUrl":"https://men.example.com/internal/ai/callback"
+}
+
+
+Flask -> MEN (callback result):
+
+{
+  "jobId":"job_123",
+  "status":"success",
+  "modelVersion":"ocr-nlp-v1.4",
+  "processingTimeMs": 3210,
+  "result":{
+    "summary":"Hemoglobin is slightly low (10.8 g/dL) — mild anemia. WBC normal.",
+    "vitals":[
+      {"name":"Hemoglobin","value":10.8,"unit":"g/dL","flag":"low","normalRange":"13.0-17.5"},
+      {"name":"WBC","value":6.4,"unit":"10^3/uL","flag":"normal","normalRange":"4.0-11.0"}
+    ],
+    "ocrText":"Full OCR text..."
+  }
+}
