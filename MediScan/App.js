@@ -8,6 +8,11 @@ import { Provider as PaperProvider, DefaultTheme } from 'react-native-paper';
 import Toast from 'react-native-toast-message';
 import * as SecureStore from 'expo-secure-store';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTranslation } from 'react-i18next';
+
+// Initialize i18n
+import './src/i18n/i18n';
 
 // Screens
 import LoginScreen from './src/screens/LoginScreen';
@@ -23,6 +28,10 @@ import LoadingScreen from './src/screens/LoadingScreen';
 // Services
 import AuthService from './src/services/AuthService';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { LanguageProvider } from './src/context/LanguageContext';
+
+// Components
+import TabNavigator from './src/components/TabNavigator';
 
 // Theme
 const theme = {
@@ -89,77 +98,9 @@ function AuthStackNavigator() {
   );
 }
 
-// Main Tab Navigator
+// Main Tab Navigator  
 function MainTabNavigator() {
-  return (
-    <Tab.Navigator
-      initialRouteName="Home"
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
-
-          switch (route.name) {
-            case 'Home':
-              iconName = 'home';
-              break;
-            case 'Upload':
-              iconName = 'cloud-upload';
-              break;
-            case 'Files':
-              iconName = 'folder';
-              break;
-            case 'Profile':
-              iconName = 'person';
-              break;
-            default:
-              iconName = 'help';
-          }
-
-          return <Icon name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: '#1A1A1A',
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '500',
-        },
-        tabBarStyle: {
-          backgroundColor: 'white',
-          borderTopColor: '#E6E6FA',
-          borderTopWidth: 1,
-          paddingVertical: 5,
-        },
-        headerStyle: {
-          backgroundColor: theme.colors.primary,
-        },
-        headerTintColor: '#fff',
-        headerTitleStyle: {
-          fontWeight: 'bold',
-        },
-      })}
-    >
-      <Tab.Screen 
-        name="Home" 
-        component={HomeScreen}
-        options={{ title: 'Dashboard' }}
-      />
-      <Tab.Screen 
-        name="Upload" 
-        component={UploadScreen}
-        options={{ title: 'Upload Document' }}
-      />
-      <Tab.Screen 
-        name="Files" 
-        component={FilesScreen}
-        options={{ title: 'My Files' }}
-      />
-      <Tab.Screen 
-        name="Profile" 
-        component={ProfileScreen}
-        options={{ title: 'Profile' }}
-      />
-    </Tab.Navigator>
-  );
+  return <TabNavigator theme={theme} />;
 }
 
 // Main App Stack Navigator
@@ -257,13 +198,15 @@ const toastConfig = {
 export default function App() {
   return (
     <PaperProvider theme={theme}>
-      <AuthProvider>
-        <View style={styles.container}>
-          <StatusBar style="light" backgroundColor={theme.colors.primary} />
-          <AppContent />
-          <Toast config={toastConfig} />
-        </View>
-      </AuthProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <View style={styles.container}>
+            <StatusBar style="light" backgroundColor={theme.colors.primary} />
+            <AppContent />
+            <Toast config={toastConfig} />
+          </View>
+        </AuthProvider>
+      </LanguageProvider>
     </PaperProvider>
   );
 }

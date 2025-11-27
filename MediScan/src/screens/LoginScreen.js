@@ -21,10 +21,13 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Animatable from 'react-native-animatable';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
+import NetworkDebugger from '../utils/NetworkDebugger';
 
 const LoginScreen = ({ navigation }) => {
   const { login, loading, error, clearError } = useAuth();
+  const { t } = useTranslation();
   
   const [formData, setFormData] = useState({
     email: '',
@@ -100,11 +103,30 @@ const LoginScreen = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Login error:', error);
-      Toast.show({
-        type: 'error',
-        text1: 'Login Error',
-        text2: 'Something went wrong. Please try again.',
-      });
+      
+      // Check if it's a network-related error
+      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        // Perform network diagnostic
+        await NetworkDebugger.performFullNetworkDiagnostic(process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3000/api/v1');
+        
+        Toast.show({
+          type: 'error',
+          text1: 'Connection Timeout',
+          text2: 'Please check your network connection and try again.',
+        });
+      } else if (!error.response) {
+        Toast.show({
+          type: 'error',
+          text1: 'Network Error',
+          text2: 'Cannot connect to server. Check if backend is running.',
+        });
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Login Error',
+          text2: 'Something went wrong. Please try again.',
+        });
+      }
     }
   };
 

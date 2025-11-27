@@ -23,11 +23,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Animatable from 'react-native-animatable';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 import FileService from '../services/FileService';
 import Toast from 'react-native-toast-message';
 
 const HomeScreen = ({ navigation }) => {
   const { user, logout } = useAuth();
+  const { t } = useTranslation();
   
   const [recentFiles, setRecentFiles] = useState([]);
   const [stats, setStats] = useState({

@@ -1,0 +1,57 @@
+{
+  "common": {
+    "loading": "લોડ થઈ રહ્યું છે...",
+    "error": "ભૂલ",
+    "success": "સવત",
+    "cancel": "રદ્દ કરો",
+    "ok": "ઠીક",
+    "login": "લોગિન",
+    "register": "નોંધણી",
+    "upload": "અપલોડ"
+  },
+  "navigation": {
+    "home": "હોમ",
+    "upload": "અપલોડ",
+    "files": "ફાઇલો",
+    "profile": "પ્રોફાઇલ"
+  },
+  "languages": {
+    "en": "English",
+    "hi": "हिन्दी",
+    "te": "తెలుగు",
+    "ta": "தமிழ்",
+    "kn": "ಕನ್ನಡ",
+    "ml": "മലയാളം",
+    "gu": "ગુજરાતી",
+    "mr": "मराठी",
+    "bn": "বাংলা"
+  },
+  "auth": {
+    "welcomeBack": "પાછા આવવા માટે આવકાર!",
+    "loginSubtitle": "તમારા મેડિકલ દસ્તાવેજો એક્સેસ કરવા માટે સાઇન ઇન કરો",
+    "email": "ઇમેઇલ",
+    "password": "પાસવર્ડ",
+    "fullName": "પૂર્ણ નામ"
+  },
+  "profile": {
+    "personalInfo": "વ્યક્તિગત માહિતી",
+    "preferences": "પસંદગીઓ",
+    "language": "ભાષા",
+    "about": "વિશે",
+    "changeLanguage": "ભાષા બદલો",
+    "selectLanguage": "ભાષા પસંદ કરો",
+    "logoutConfirm": "શું તમે ખરેખર લોગઆઉટ કરવા માંગો છો?"
+  },
+  "upload": {
+    "title": "દસ્તાવેજ અપલોડ કરો"
+  },
+  "home": {
+    "greeting": "નમસ્તે"
+  },
+  "files": {
+    "title": "મારા દસ્તાવેજો"
+  },
+  "errors": {
+    "unknownError": "અજ્ઞાત ભૂલ આવી"
+  }
+}

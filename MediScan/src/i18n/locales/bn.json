@@ -1,0 +1,57 @@
+{
+  "common": {
+    "loading": "লোড হচ্ছে...",
+    "error": "ত্রুটি",
+    "success": "সফলতা",
+    "cancel": "বাতিল",
+    "ok": "ঠিক আছে",
+    "login": "লগইন",
+    "register": "নন্দন",
+    "upload": "আপলোড"
+  },
+  "navigation": {
+    "home": "হোম",
+    "upload": "আপলোড",
+    "files": "ফাইল",
+    "profile": "প্রোফাইল"
+  },
+  "languages": {
+    "en": "English",
+    "hi": "हिन्दी",
+    "te": "তেলেগু",
+    "ta": "তামিল",
+    "kn": "কন্নড়",
+    "ml": "মালায়ালম",
+    "gu": "গুজরাটি",
+    "mr": "মারাঠি",
+    "bn": "বাংলা"
+  },
+  "auth": {
+    "welcomeBack": "আবার আপনাকে স্বাগতম!",
+    "loginSubtitle": "আপনার মেডিকেল ডকুমেন্ট অ্যাক্সেস করতে সাইন ইন করুন",
+    "email": "ইমেইল",
+    "password": "পাসওয়ার্ড",
+    "fullName": "পূর্ণ নাম"
+  },
+  "profile": {
+    "personalInfo": "ব্যক্তিগত তথ্য",
+    "preferences": "পছন্দসমূহ",
+    "language": "ভাষা",
+    "about": "সম্পর্কে",
+    "changeLanguage": "ভাষা পরিবর্তন করুন",
+    "selectLanguage": "ভাষা নির্বাচন করুন",
+    "logoutConfirm": "আপনি কি সত্যিই লগআউট করতে চান?"
+  },
+  "upload": {
+    "title": "ডকুমেন্ট আপলোড করুন"
+  },
+  "home": {
+    "greeting": "নমস্কার"
+  },
+  "files": {
+    "title": "আমার ডকুমেন্টসমূহ"
+  },
+  "errors": {
+    "unknownError": "অজানা ত্রুটি ঘটেছে"
+  }
+}

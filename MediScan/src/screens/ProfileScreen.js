@@ -18,11 +18,15 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Animatable from 'react-native-animatable';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import LanguageSelector from '../components/LanguageSelector';
 
 const ProfileScreen = ({ navigation }) => {
   const { user, logout, updateProfile } = useAuth();
+  const { t } = useTranslation();
   const [isEditing, setIsEditing] = useState(false);
+  const [showLanguageSelector, setShowLanguageSelector] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -56,12 +60,12 @@ const ProfileScreen = ({ navigation }) => {
 
   const handleLogout = () => {
     Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
+      t('common.logout'),
+      t('profile.logoutConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Logout',
+          text: t('common.logout'),
           style: 'destructive',
           onPress: async () => {
             await logout();
@@ -73,6 +77,15 @@ const ProfileScreen = ({ navigation }) => {
         },
       ]
     );
+  };
+
+  const handleLanguagePress = () => {
+    setShowLanguageSelector(true);
+  };
+
+  const handleLanguageChange = (languageCode) => {
+    // Language change is handled in the LanguageSelector component
+    console.log('Language changed to:', languageCode);
   };
 
   return (
@@ -109,13 +122,13 @@ const ProfileScreen = ({ navigation }) => {
               {isEditing ? (
                 <View style={styles.editForm}>
                   <TextInput
-                    label="Name"
+                    label={t('auth.fullName')}
                     value={formData.name}
                     onChangeText={(text) => setFormData({ ...formData, name: text })}
                     style={styles.input}
                   />
                   <TextInput
-                    label="Email"
+                    label={t('auth.email')}
                     value={formData.email}
                     onChangeText={(text) => setFormData({ ...formData, email: text })}
                     style={styles.input}
@@ -128,35 +141,42 @@ const ProfileScreen = ({ navigation }) => {
                       onPress={handleCancel}
                       style={styles.cancelButton}
                     >
-                      Cancel
+                      {t('common.cancel')}
                     </Button>
                     <Button
                       mode="contained"
                       onPress={handleSave}
                       style={styles.saveButton}
                     >
-                      Save
+                      {t('common.save')}
                     </Button>
                   </View>
                 </View>
               ) : (
                 <View>
                   <List.Section>
+                    <List.Subheader>{t('profile.personalInfo')}</List.Subheader>
                     <List.Item
-                      title="Name"
-                      description={user?.name || 'Not set'}
+                      title={t('auth.fullName')}
+                      description={user?.name || t('profile.personalInfo')}
                       left={props => <List.Icon {...props} icon="account" />}
                     />
                     <List.Item
-                      title="Email"
+                      title={t('auth.email')}
                       description={user?.email || 'Not set'}
                       left={props => <List.Icon {...props} icon="email" />}
                     />
+                    
+                    <List.Subheader>{t('profile.preferences')}</List.Subheader>
                     <List.Item
-                      title="Role"
-                      description={user?.role || 'Patient'}
-                      left={props => <List.Icon {...props} icon="badge-account" />}
+                      title={t('profile.language')}
+                      description={t('profile.changeLanguage')}
+                      left={props => <List.Icon {...props} icon="translate" />}
+                      right={props => <List.Icon {...props} icon="chevron-right" />}
+                      onPress={handleLanguagePress}
                     />
+                    
+                    <List.Subheader>{t('profile.about')}</List.Subheader>
                     <List.Item
                       title="Member Since"
                       description={user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Unknown'}
@@ -177,7 +197,7 @@ const ProfileScreen = ({ navigation }) => {
                 contentStyle={styles.buttonContent}
                 icon="pencil"
               >
-                Edit Profile
+                {t('common.edit')}
               </Button>
             )}
 
@@ -188,11 +208,17 @@ const ProfileScreen = ({ navigation }) => {
               contentStyle={styles.buttonContent}
               icon="logout"
             >
-              Logout
+              {t('common.logout')}
             </Button>
           </View>
         </Animatable.View>
       </ScrollView>
+      
+      <LanguageSelector
+        visible={showLanguageSelector}
+        onClose={() => setShowLanguageSelector(false)}
+        onLanguageChange={handleLanguageChange}
+      />
     </LinearGradient>
   );
 };

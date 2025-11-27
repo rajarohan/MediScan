@@ -1,0 +1,57 @@
+{
+  "common": {
+    "loading": "लोड होत आहे...",
+    "error": "त्रुटी",
+    "success": "यश",
+    "cancel": "रद्द करा",
+    "ok": "ठीक",
+    "login": "लॉगिन",
+    "register": "नोंदणी",
+    "upload": "अपलोड"
+  },
+  "navigation": {
+    "home": "घर",
+    "upload": "अपलोड",
+    "files": "फाइल्स",
+    "profile": "प्रोफाइल"
+  },
+  "languages": {
+    "en": "English",
+    "hi": "हिन्दी",
+    "te": "తెలుగు",
+    "ta": "தமிழ்",
+    "kn": "ಕನ್ನಡ",
+    "ml": "മലയാളം",
+    "gu": "ગુજરાતી",
+    "mr": "मराठी",
+    "bn": "বাংলা"
+  },
+  "auth": {
+    "welcomeBack": "परत आपले स्वागत!",
+    "loginSubtitle": "आपल्या वैद्यकीय कागदपत्रांमध्ये प्रवेश करण्यासाठी साइन इन करा",
+    "email": "ईमेल",
+    "password": "पासवर्ड",
+    "fullName": "पूर्ण नाव"
+  },
+  "profile": {
+    "personalInfo": "व्यक्तिगत माहिती",
+    "preferences": "प्राधान्ये",
+    "language": "भाषा",
+    "about": "बद्दल",
+    "changeLanguage": "भाषा बदला",
+    "selectLanguage": "भाषा निवडा",
+    "logoutConfirm": "तुम्हाला खरोखर लॉगआउट करायचे आहे का?"
+  },
+  "upload": {
+    "title": "दस्तऐवज अपलोड करा"
+  },
+  "home": {
+    "greeting": "नमस्कार"
+  },
+  "files": {
+    "title": "माझे दस्तऐवज"
+  },
+  "errors": {
+    "unknownError": "अज्ञात त्रुटी आली"
+  }
+}

@@ -1,9 +1,29 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 
 // API Configuration
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://192.168.1.12:3000/api/v1'; // Update this for production
-const API_TIMEOUT = parseInt(process.env.EXPO_PUBLIC_API_TIMEOUT) || 30000; // 30 seconds (increased for development)
+// Auto-detect environment and use appropriate base URL
+const getApiBaseUrl = () => {
+  if (process.env.EXPO_PUBLIC_API_BASE_URL) {
+    return process.env.EXPO_PUBLIC_API_BASE_URL;
+  }
+  
+  // Default fallbacks
+  if (__DEV__) {
+    // iOS Simulator uses localhost, Android emulator uses 10.0.2.2
+    if (Platform.OS === 'ios') {
+      return 'http://localhost:3000/api/v1';
+    } else {
+      return 'http://10.0.2.2:3000/api/v1';
+    }
+  }
+  
+  return 'https://your-production-api.com/api/v1';
+};
+
+const API_BASE_URL = getApiBaseUrl();
+const API_TIMEOUT = parseInt(process.env.EXPO_PUBLIC_API_TIMEOUT) || 60000; // 60 seconds for development
 
 // Create axios instance
 const apiClient = axios.create({
@@ -46,7 +66,14 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    console.error('API Response Error:', error.response?.status, error.response?.data);
+    // Enhanced error logging
+    if (error.code === 'ECONNABORTED') {
+      console.error('API Request Timeout:', error.message);
+    } else if (error.code === 'NETWORK_ERROR' || !error.response) {
+      console.error('Network Error - Check if backend server is running:', error.message);
+    } else {
+      console.error('API Response Error:', error.response?.status, error.response?.data);
+    }
 
     // Handle 401 errors (token expired)
     if (error.response?.status === 401 && !originalRequest._retry) {
