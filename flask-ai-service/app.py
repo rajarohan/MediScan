@@ -80,6 +80,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+def check_tesseract_availability():
+    """Check if Tesseract OCR is available and working."""
+    try:
+        if not PYTESSERACT_AVAILABLE:
+            return False
+        version = pytesseract.get_tesseract_version()
+        return version is not None and 'tesseract' in str(version).lower()
+    except Exception:
+        return False
+
 # Initialize Flask app
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = int(os.getenv('MAX_CONTENT_LENGTH', 16 * 1024 * 1024))  # 16MB default max file size
@@ -143,7 +153,7 @@ def send_callback(callback_url: str, payload: dict) -> bool:
     try:
         logger.info(f"Sending callback to: {callback_url}")
         
-        # Generate HMAC signature for the callback
+        # Generate HMAC signature for the callback (must match backend's expectation)
         payload_bytes = json.dumps(payload).encode()
         signature = hmac.new(
             CONFIG['SECRET_KEY'].encode(),
@@ -174,6 +184,27 @@ def extract_text_from_image(image_path: str) -> Dict[str, Any]:
     """Extract text from image using OCR."""
     try:
         logger.info(f"Starting OCR processing for: {image_path}")
+        
+        # Check if required libraries are available
+        if not PYTESSERACT_AVAILABLE:
+            logger.error("Pytesseract is not available. Please install tesseract-ocr and pytesseract.")
+            return {
+                'text': '',
+                'confidence': 0.0,
+                'word_count': 0,
+                'words_with_positions': [],
+                'error': 'OCR library not available'
+            }
+        
+        if not CV2_AVAILABLE:
+            logger.error("OpenCV is not available. Please install opencv-python.")
+            return {
+                'text': '',
+                'confidence': 0.0,
+                'word_count': 0,
+                'words_with_positions': [],
+                'error': 'Computer vision library not available'
+            }
         
         # Load and preprocess image
         image = cv2.imread(image_path)
@@ -649,7 +680,7 @@ def health_check():
         'models': {
             'nlp': nlp_model is not None,
             'medical_ner': medical_ner is not None,
-            'ocr': 'tesseract' in str(pytesseract.get_tesseract_version()).lower()
+            'ocr': check_tesseract_availability()
         }
     })
 
@@ -1133,10 +1164,10 @@ def process_document():
                 }
             }
             
-            # Generate HMAC signature for callback
+            # Generate HMAC signature for callback (must match backend's expectation)
             callback_signature = hmac.new(
                 CONFIG['SECRET_KEY'].encode(),
-                json.dumps(callback_payload, separators=(',', ':')).encode(),
+                json.dumps(callback_payload).encode(),
                 hashlib.sha256
             ).hexdigest()
             
@@ -1241,16 +1272,144 @@ def internal_error(error):
         'code': 'INTERNAL_ERROR'
     }), 500
 
+@app.route('/api/analyze-text', methods=['POST'])
+def analyze_text():
+    """Simple text analysis endpoint that takes text and returns summary with insights."""
+    try:
+        # Get request data
+        data = request.get_json()
+        
+        if not data or 'text' not in data:
+            return jsonify({
+                'success': False,
+                'message': 'Text field is required',
+                'code': 'MISSING_TEXT'
+            }), 400
+        
+        text = data['text']
+        
+        if not text or len(text.strip()) == 0:
+            return jsonify({
+                'success': False,
+                'message': 'Text cannot be empty',
+                'code': 'EMPTY_TEXT'
+            }), 400
+        
+        logger.info(f"Processing text analysis request - Length: {len(text)} characters")
+        
+        # Basic text analysis
+        word_count = len(text.split())
+        sentence_count = len([s for s in text.split('.') if s.strip()])
+        char_count = len(text)
+        
+        # Simple medical keyword detection
+        medical_keywords = [
+            'patient', 'doctor', 'hospital', 'medicine', 'diagnosis', 'treatment', 
+            'prescription', 'symptoms', 'pain', 'fever', 'blood', 'pressure',
+            'heart', 'lung', 'kidney', 'liver', 'brain', 'surgery', 'therapy',
+            'medication', 'dose', 'mg', 'ml', 'tablet', 'capsule'
+        ]
+        
+        found_keywords = []
+        text_lower = text.lower()
+        for keyword in medical_keywords:
+            if keyword in text_lower:
+                found_keywords.append(keyword)
+        
+        # Generate simple summary (first 200 characters + "...")
+        summary = text[:200] + "..." if len(text) > 200 else text
+        
+        # Medical entity extraction using spaCy if available
+        entities = []
+        if SPACY_AVAILABLE and nlp_model:
+            try:
+                doc = nlp_model(text)
+                for ent in doc.ents:
+                    if ent.label_ in ['PERSON', 'ORG', 'DATE', 'CARDINAL', 'MONEY']:
+                        entities.append({
+                            'text': ent.text,
+                            'label': ent.label_,
+                            'start': ent.start_char,
+                            'end': ent.end_char
+                        })
+            except Exception as e:
+                logger.warning(f"Entity extraction failed: {e}")
+        
+        # Generate insights
+        insights = []
+        
+        if word_count > 100:
+            insights.append("Document contains substantial medical information")
+        elif word_count < 20:
+            insights.append("Document appears to be brief or incomplete")
+        
+        if len(found_keywords) > 5:
+            insights.append(f"High medical content detected ({len(found_keywords)} medical terms found)")
+        elif len(found_keywords) > 0:
+            insights.append(f"Medical content detected ({len(found_keywords)} medical terms found)")
+        else:
+            insights.append("Limited medical terminology detected")
+        
+        if any(word in text_lower for word in ['urgent', 'emergency', 'critical', 'severe']):
+            insights.append("Document may indicate urgent medical condition")
+        
+        if any(word in text_lower for word in ['prescription', 'dosage', 'medication', 'mg', 'ml']):
+            insights.append("Document contains prescription or medication information")
+        
+        # Response
+        result = {
+            'success': True,
+            'message': 'Text analysis completed successfully',
+            'data': {
+                'summary': summary,
+                'insights': insights,
+                'statistics': {
+                    'word_count': word_count,
+                    'sentence_count': sentence_count,
+                    'character_count': char_count,
+                    'medical_keywords_found': len(found_keywords)
+                },
+                'medical_keywords': found_keywords[:10],  # Limit to first 10
+                'entities': entities[:20],  # Limit to first 20 entities
+                'analysis_timestamp': datetime.utcnow().isoformat(),
+                'processing_time_ms': 0  # Would be calculated in real implementation
+            }
+        }
+        
+        logger.info(f"Text analysis completed - {word_count} words, {len(insights)} insights generated")
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        logger.error(f"Error in text analysis: {e}")
+        return jsonify({
+            'success': False,
+            'message': 'Text analysis failed',
+            'code': 'ANALYSIS_ERROR',
+            'error': str(e)
+        }), 500
+
 if __name__ == '__main__':
     logger.info("Starting MediScan AI Service")
     logger.info(f"Temp directory: {CONFIG['TEMP_DIR']}")
     logger.info(f"Supported formats: {', '.join(CONFIG['SUPPORTED_FORMATS'])}")
     logger.info(f"OCR language: {CONFIG['OCR_LANGUAGE']}")
     
+    # Check dependencies
+    logger.info(f"Pytesseract available: {PYTESSERACT_AVAILABLE}")
+    logger.info(f"OpenCV available: {CV2_AVAILABLE}")
+    logger.info(f"PIL available: {PIL_AVAILABLE}")
+    logger.info(f"PDF2Image available: {PDF2IMAGE_AVAILABLE}")
+    
+    if PYTESSERACT_AVAILABLE and check_tesseract_availability():
+        logger.info("✅ Tesseract OCR is ready")
+    else:
+        logger.warning("⚠️  Tesseract OCR may not be available")
+    
     # Run Flask app
     app.run(
         host='0.0.0.0',
-        port=int(os.getenv('PORT', 5000)),
-        debug=os.getenv('FLASK_ENV') == 'development',
+        port=int(os.getenv('PORT', 5001)),
+        debug=False,
         threaded=True
     )

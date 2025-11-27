@@ -267,7 +267,7 @@ const uploadFile = async (req, res) => {
                     jobId: processingJob.jobId,
                     fileId: fileDoc._id.toString(),
                     fileName: fileDoc.originalName,
-                    extractedText: metadata.extractedText,
+                    extractedText: extractedText,
                     callbackUrl,
                     metadata: {
                         ...fileDoc.metadata,
@@ -278,7 +278,7 @@ const uploadFile = async (req, res) => {
                 logger.info('Using text processing endpoint for pre-extracted text:', {
                     fileId: fileDoc._id,
                     jobId: processingJob.jobId,
-                    textLength: metadata.extractedText.length
+                    textLength: extractedText.length
                 });
             } else {
                 // Use traditional file processing endpoint

@@ -1,12 +1,27 @@
-# MediScan - Complete System Documentation
+# MediScan - Complete Medical Document Processing System
 
-## System Overview
+## 🏥 System Overview
 
-MediScan is a comprehensive medical document processing system with secure OCR, AI analysis, and clinician-friendly summaries. The system consists of three main components:
+MediScan is a comprehensive medical document processing system with secure OCR, AI-powered text extraction, and medical entity recognition. The system provides a complete solution for digitizing and analyzing medical documents with clinician-friendly summaries.
 
-1. **React Native Mobile App** - User-facing mobile application
-2. **Node.js Backend API** - Authentication, file management, and API orchestration
-3. **Flask AI Service** - OCR processing and medical entity extraction
+### Components
+1. **React Native Mobile App** - Cross-platform mobile interface with camera and document upload
+2. **Node.js Backend API** - Secure REST API with JWT authentication and file management
+3. **Flask AI Service** - Advanced OCR, medical NLP, and entity extraction service
+
+## 🚀 Quick Start
+
+### One-Command Setup
+```bash
+./setup.sh      # Initial setup and dependency installation
+./start-all.sh  # Start all services
+./health-check.sh  # Verify everything is working
+```
+
+### Manual Verification
+- Backend API: http://localhost:3000/health
+- AI Service: http://localhost:5001/health
+- Mobile App: Expo Developer Tools
 
 ## Architecture
 
